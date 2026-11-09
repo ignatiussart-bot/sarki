@@ -159,7 +159,8 @@ header.top { display: grid; gap: 22px; justify-items: center; }
 
 /* form */
 form { display: grid; gap: 12px; }
-.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+@media (max-width: 520px) { .seg { grid-template-columns: repeat(2, 1fr); } }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
 .seg label { text-align: center; padding: 8px 4px; border-radius: 999px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--ink-soft); background: var(--glass); border: 1px solid var(--stroke); }
 .seg input:checked + label { background: var(--pill); color: #fff; border-color: rgba(255, 255, 255, 0.25); box-shadow: 0 6px 18px -6px rgba(170, 80, 255, 0.8); }
@@ -219,6 +220,13 @@ form { display: grid; gap: 12px; }
 .goal-form input { width: 100%; background: var(--field); border: 1px solid var(--stroke); border-radius: 14px; padding: 10px 12px; color: var(--ink); font: inherit; }
 .goal-form input[data-money] { text-align: right; font-variant-numeric: tabular-nums; }
 .goal-form .row-btn { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.goal-log { display: grid; gap: 4px; margin: 0; padding: 10px 12px; list-style: none; border-radius: 14px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--stroke); }
+.goal-log li.goal-log-head { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.goal-log li.goal-log-head span { overflow: visible; white-space: nowrap; color: var(--ink-soft); }
+.goal-log li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.goal-log li span:first-child { color: var(--ink-soft); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-log li b { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--masuk); }
+.goal-log li b.out { color: var(--keluar); }
 .goal-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
 
 /* bars */
@@ -382,6 +390,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
             <input type="radio" name="jenis" id="j-keluar" value="keluar" checked><label for="j-keluar">Pengeluaran</label>
             <input type="radio" name="jenis" id="j-masuk" value="masuk"><label for="j-masuk">Pemasukan</label>
             <input type="radio" name="jenis" id="j-darurat" value="darurat"><label for="j-darurat">Dana darurat</label>
+            <input type="radio" name="jenis" id="j-target" value="target"><label for="j-target">Target</label>
           </div>
           <label class="field"><span>Jumlah</span>
             <span class="amount"><b>Rp</b><input id="f-jumlah" inputmode="numeric" autocomplete="off" placeholder="0"></span>
@@ -450,6 +459,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
               <button type="button" data-f="masuk" aria-pressed="false">Masuk</button>
               <button type="button" data-f="keluar" aria-pressed="false">Keluar</button>
               <button type="button" data-f="darurat" aria-pressed="false">Darurat</button>
+              <button type="button" data-f="target" aria-pressed="false">Target</button>
             </div>
             <input class="search" id="q" type="search" placeholder="Cari catatan atau kategori" aria-label="Cari transaksi">
           </div>
@@ -486,8 +496,9 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
   const HARI3 = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
   const PERIOD_NAME = { hari: "Hari", minggu: "Minggu", bulan: "Bulan", tahun: "Tahun" };
-  const JENIS_LABEL = { masuk: "Pemasukan", keluar: "Pengeluaran", setor: "Setor dana darurat", tarik: "Ambil dana darurat" };
-  const CASH = { masuk: 1, keluar: -1, setor: -1, tarik: 1 };
+  const JENIS_LABEL = { masuk: "Pemasukan", keluar: "Pengeluaran", setor: "Setor dana darurat", tarik: "Ambil dana darurat", nabung: "Tabung ke target", cairkan: "Ambil dari target" };
+  const CASH = { masuk: 1, keluar: -1, setor: -1, tarik: 1, nabung: -1, cairkan: 1 };
+  const isGoalTx = (t) => t.jenis === "nabung" || t.jenis === "cairkan";
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -558,10 +569,11 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     return Math.round((end - r.s) / 864e5) + 1;
   }
   function totals(list) {
-    const o = { masuk: 0, keluar: 0, setor: 0, tarik: 0, n: { masuk: 0, keluar: 0, setor: 0, tarik: 0 } };
+    const o = { masuk: 0, keluar: 0, setor: 0, tarik: 0, nabung: 0, cairkan: 0, n: { masuk: 0, keluar: 0, setor: 0, tarik: 0, nabung: 0, cairkan: 0 } };
     list.forEach((t) => { if (o[t.jenis] != null) { o[t.jenis] += amt(t); o.n[t.jenis]++; } });
     o.tabung = o.setor - o.tarik;
-    o.sisa = o.masuk - o.keluar - o.tabung;
+    o.target = o.nabung - o.cairkan;
+    o.sisa = o.masuk - o.keluar - o.tabung - o.target;
     return o;
   }
 
@@ -652,7 +664,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   function renderSummary() {
     const r = curRange();
     const o = totals(txIn(r));
-    const any = o.n.masuk + o.n.keluar + o.n.setor + o.n.tarik > 0;
+    const any = o.n.masuk + o.n.keluar + o.n.setor + o.n.tarik + o.n.nabung + o.n.cairkan > 0;
     $("s-sisa").textContent = fmtSigned(o.sisa);
     $("s-sisa").className = "val " + (o.sisa < 0 ? "neg" : "");
     $("s-masuk").textContent = fmt(o.masuk);
@@ -667,16 +679,16 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     if (!any) rate = "Belum ada catatan di periode ini";
     else if (o.masuk <= 0) rate = "Belum ada pemasukan tercatat di periode ini";
     else {
-      const pctTab = Math.round((Math.max(0, o.tabung) / o.masuk) * 100);
+      const pctTab = Math.round((Math.max(0, o.tabung + o.target) / o.masuk) * 100);
       const pctBel = Math.round((o.keluar / o.masuk) * 100);
-      rate = o.sisa >= 0 ? "Dari pemasukan: " + pctBel + "% dibelanjakan, " + pctTab + "% ke dana darurat" : "Pengeluaran dan tabungan melebihi pemasukan sebesar " + fmt(o.sisa);
+      rate = o.sisa >= 0 ? "Dari pemasukan: " + pctBel + "% dibelanjakan, " + pctTab + "% ditabung" : "Pengeluaran dan tabungan melebihi pemasukan sebesar " + fmt(o.sisa);
     }
     $("s-rate").textContent = rate;
     const kata = { hari: "hari ini", minggu: "minggu ini", bulan: "bulan ini", tahun: "tahun ini" }[state.period];
     $("headline").textContent =
       !any ? "Ayo mulai catat keuanganmu"
       : o.sisa < 0 ? "Pengeluaranmu " + kata + " sedang melaju kencang"
-      : o.tabung > 0 ? "Kamu sedang di jalur hemat " + kata + "!"
+      : o.tabung + o.target > 0 ? "Kamu sedang di jalur hemat " + kata + "!"
       : "Keuanganmu " + kata + " masih terkendali";
   }
 
@@ -746,19 +758,33 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     return '<p class="goal-plan">Sisa ' + bulan + " bulan · tabung sekitar " + fmt(roundUp(kurang / bulan, 1000)) + " per bulan</p>";
   }
 
+  const goalTxs = (g) => state.tx.filter((t) => isGoalTx(t) && t.goalId === g.id);
+  const goalSaved = (g) => Math.max(0, g.terkumpul + goalTxs(g).reduce((a, t) => a + (t.jenis === "nabung" ? 1 : -1) * amt(t), 0));
+
   function goalForm(g) {
     const v = (n) => (n ? Number(n).toLocaleString("id-ID") : "");
     return '<form class="goal-form" data-form="goal" novalidate>' +
       '<label class="field"><span>Nama target</span><input name="nama" id="g-nama" maxlength="40" placeholder="mis. Beli HP baru" value="' + esc(g ? g.nama : "") + '"></label>' +
       '<div class="row2"><label class="field"><span>Jumlah target (Rp)</span><input name="target" data-money inputmode="numeric" placeholder="5.000.000" value="' + v(g && g.target) + '"></label>' +
-      '<label class="field"><span>Sudah terkumpul (Rp)</span><input name="terkumpul" data-money inputmode="numeric" placeholder="0" value="' + v(g && g.terkumpul) + '"></label></div>' +
+      '<label class="field"><span>Saldo awal (Rp)</span><input name="terkumpul" data-money inputmode="numeric" placeholder="0" value="' + v(g && g.terkumpul) + '"></label></div>' +
+      '<p class="hint">Saldo awal = uang yang sudah terkumpul sebelum dicatat di sini. Setoran berikutnya cukup lewat tombol “+ Tabung”.</p>' +
       '<label class="field"><span>Tenggat (boleh dikosongkan)</span><input name="tenggat" type="date" value="' + esc(g ? g.tenggat : "") + '"></label>' +
       '<p class="form-msg" hidden></p>' +
       '<div class="row-btn"><button type="submit" class="btn primary">' + (g ? "Simpan perubahan" : "Buat target") + '</button><button type="button" class="btn" data-act="batal">Batal</button></div></form>';
   }
 
+  function goalLog(g) {
+    const list = goalTxs(g).sort((a, b) => (b.tanggal + (b.dibuat || "")).localeCompare(a.tanggal + (a.dibuat || "")));
+    if (!list.length) return "";
+    const mr = rangeFor("bulan", dayStart(new Date()));
+    const bulanIni = list.filter((t) => inRange(t, mr)).reduce((a, t) => a + (t.jenis === "nabung" ? 1 : -1) * amt(t), 0);
+    return '<ul class="goal-log"><li class="goal-log-head"><span>' + list.length + "x setoran</span><span>bulan ini " + (bulanIni < 0 ? "−" : "+") + fmt(bulanIni) + "</span></li>" +
+      list.slice(0, 4).map((t) => "<li><span>" + tglPendek(fromIso(t.tanggal)) + (t.catatan ? " · " + esc(t.catatan) : "") + "</span><b" + (t.jenis === "cairkan" ? ' class="out">−' : ">+") + fmt(t.jumlah) + "</b></li>").join("") +
+      (list.length > 4 ? '<li><span>dan ' + (list.length - 4) + " setoran lain di riwayat transaksi</span></li>" : "") + "</ul>";
+  }
+
   function goalCard(g, canEdit) {
-    const kumpul = g.terkumpul, tgt = g.target;
+    const kumpul = goalSaved(g), tgt = g.target;
     const pctRaw = tgt > 0 ? (kumpul / tgt) * 100 : 0;
     const done = tgt > 0 && kumpul >= tgt;
     const kurang = tgt - kumpul;
@@ -769,16 +795,18 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       '<div class="goal-pct">' + pctText + "</div></div>" +
       '<div class="bar thick" role="progressbar" aria-label="Kemajuan ' + esc(g.nama) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(Math.min(100, pctRaw)) + '"><i style="width:' + Math.min(100, pctRaw).toFixed(1) + '%"></i></div>' +
       '<div class="dd-meta"><span>' + (done ? "Target tercapai" : "kurang " + fmt(kurang)) + "</span><span>" + (g.tenggat ? "tenggat " + tglPendek(fromIso(g.tenggat)) : "tanpa tenggat") + "</span></div>" +
-      goalPlan(g, kurang);
+      goalPlan(g, kurang) + goalLog(g);
     if (canEdit) {
       const add = state.goalAdd && state.goalAdd.id === g.id ? state.goalAdd : null;
       if (add) {
         html += '<form class="goal-form" data-form="isi" data-id="' + esc(g.id) + '" data-arah="' + add.arah + '" novalidate>' +
           '<label class="field"><span>' + (add.arah === "ambil" ? "Jumlah yang diambil (Rp)" : "Jumlah yang ditabung (Rp)") + '</span><input name="jumlah" data-money inputmode="numeric" placeholder="' + (add.arah === "ambil" ? "0" : (kurang > 0 ? Number(roundUp(Math.min(kurang, 500000), 1000)).toLocaleString("id-ID") : "0")) + '"></label>' +
+          '<label class="field"><span>Catatan (boleh dikosongkan)</span><input name="catatan" maxlength="80" placeholder="' + (add.arah === "ambil" ? "mis. Dipakai bayar DP" : "mis. Sisihkan dari gaji") + '"></label>' +
+          '<p class="hint">Dicatat hari ini dan masuk ke riwayat transaksi.</p>' +
           '<p class="form-msg" hidden></p>' +
           '<div class="row-btn"><button type="submit" class="btn primary">' + (add.arah === "ambil" ? "Ambil" : "Tabung") + '</button><button type="button" class="btn" data-act="batal">Batal</button></div></form>';
       } else if (state.goalConfirm === g.id) {
-        html += '<div class="goal-confirm"><span>Hapus target ini?</span><button type="button" class="btn small danger" data-act="yakin" data-id="' + esc(g.id) + '">Ya, hapus</button><button type="button" class="btn small" data-act="batal">Batal</button></div>';
+        html += '<div class="goal-confirm"><span>Hapus target ini? Setorannya tetap ada di riwayat transaksi.</span><button type="button" class="btn small danger" data-act="yakin" data-id="' + esc(g.id) + '">Ya, hapus</button><button type="button" class="btn small" data-act="batal">Batal</button></div>';
       } else {
         html += '<div class="goal-actions">' +
           (done ? "" : '<button type="button" class="btn grow" data-act="tambah" data-id="' + esc(g.id) + '">+ Tabung</button>') +
@@ -790,8 +818,15 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     return html + "</article>";
   }
 
+  function goalToast(g, before, ambil, n) {
+    const after = Math.max(0, before + (ambil ? -n : n));
+    if (!ambil && g.target > 0 && after >= g.target && before < g.target) return "Selamat! Target “" + g.nama + "” tercapai 🎉";
+    return ambil ? fmt(n) + " diambil dari “" + g.nama + "”" : "+" + fmt(n) + " ditabung ke “" + g.nama + "” · sekarang " + fmt(after);
+  }
+
   function renderGoals() {
     const box = $("goals");
+    if ($("j-target").checked) fillCategories("target", $("f-kategori").value);
     const canEdit = !readOnly && state.mode !== "loading";
     $("g-add-btn").hidden = !canEdit || state.goalEdit === "new";
     let html = state.goalEdit === "new" ? goalForm(null) : "";
@@ -799,7 +834,8 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       html += '<p class="hint">Belum ada target. Buat target seperti “Beli HP” atau “Liburan”, isi jumlahnya, lalu tabung sedikit demi sedikit sampai tercapai.</p>';
     }
     // Targets still in progress first, finished ones at the bottom.
-    const order = [...state.goals].sort((a, b) => (a.target > 0 && a.terkumpul >= a.target) - (b.target > 0 && b.terkumpul >= b.target));
+    const isDone = (g) => g.target > 0 && goalSaved(g) >= g.target;
+    const order = [...state.goals].sort((a, b) => isDone(a) - isDone(b));
     for (const g of order) html += state.goalEdit === g.id ? goalForm(g) : goalCard(g, canEdit);
     box.innerHTML = html;
     box.querySelectorAll("input[data-money]").forEach(bindThousands);
@@ -851,9 +887,9 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       const r = rangeFor(p, state.anchor);
       const o = totals(txIn(r));
       return '<tr class="' + (p === state.period ? "on" : "") + '"><td><button type="button" class="per" data-p="' + p + '"><strong>' + PERIOD_NAME[p] + (containsToday(r) ? " ini" : "") + "</strong><small>" + rangeText(p, r, false) + "</small></button></td>" +
-        '<td class="pos">' + fmt(o.masuk) + '</td><td class="neg">' + fmt(o.keluar) + '</td><td class="acc">' + fmtSigned(o.tabung) + '</td><td class="' + (o.sisa < 0 ? "neg" : "") + '">' + fmtSigned(o.sisa) + "</td></tr>";
+        '<td class="pos">' + fmt(o.masuk) + '</td><td class="neg">' + fmt(o.keluar) + '</td><td class="acc">' + fmtSigned(o.tabung) + '</td><td class="acc">' + fmtSigned(o.target) + '</td><td class="' + (o.sisa < 0 ? "neg" : "") + '">' + fmtSigned(o.sisa) + "</td></tr>";
     }).join("");
-    $("rekap").innerHTML = '<table class="rekap"><thead><tr><th>Periode</th><th>Pemasukan</th><th>Pengeluaran</th><th>Dana darurat</th><th>Sisa</th></tr></thead><tbody>' + rows + "</tbody></table>";
+    $("rekap").innerHTML = '<table class="rekap"><thead><tr><th>Periode</th><th>Pemasukan</th><th>Pengeluaran</th><th>Dana darurat</th><th>Target</th><th>Sisa</th></tr></thead><tbody>' + rows + "</tbody></table>";
   }
 
   function chartBuckets() {
@@ -938,7 +974,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
 
     const q = state.q.trim().toLowerCase();
     const rows = inPeriod
-      .filter((t) => state.filter === "semua" || (state.filter === "darurat" ? (t.jenis === "setor" || t.jenis === "tarik") : t.jenis === state.filter))
+      .filter((t) => state.filter === "semua" || (state.filter === "darurat" ? (t.jenis === "setor" || t.jenis === "tarik") : state.filter === "target" ? isGoalTx(t) : t.jenis === state.filter))
       .filter((t) => !q || (t.catatan || "").toLowerCase().includes(q) || (t.kategori || "").toLowerCase().includes(q))
       .sort((a, b) => (b.tanggal + (b.dibuat || "")).localeCompare(a.tanggal + (a.dibuat || "")));
 
@@ -958,11 +994,13 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       html += '<div class="day"><div class="day-head"><span>' + HARI[d.getDay()] + ", " + d.getDate() + " " + BULAN[d.getMonth()] + (state.period === "tahun" ? "" : "") + '</span><span class="num ' + (net < 0 ? "neg" : "pos") + '">' + (net < 0 ? "−" : "+") + fmt(net) + "</span></div>";
       items.forEach((t) => {
         const dd = t.jenis === "setor" || t.jenis === "tarik";
+        const gt = isGoalTx(t);
         const sign = (CASH[t.jenis] || 0) > 0 ? "+" : "−";
-        const cls = dd ? "acc" : t.jenis === "masuk" ? "pos" : "neg";
-        const sub = dd ? (t.jenis === "setor" ? "Setor ke dana darurat" : "Ambil dari dana darurat") : t.kategori;
-        const icCls = dd ? "dd" : t.jenis;
-        const icTxt = t.jenis === "masuk" ? "+" : t.jenis === "keluar" ? "−" : t.jenis === "setor" ? "↗" : "↘";
+        const cls = dd || gt ? "acc" : t.jenis === "masuk" ? "pos" : "neg";
+        const gName = gt ? ((state.goals.find((g) => g.id === t.goalId) || {}).nama || t.kategori) : "";
+        const sub = dd ? (t.jenis === "setor" ? "Setor ke dana darurat" : "Ambil dari dana darurat") : gt ? (t.jenis === "nabung" ? "Tabung ke target · " : "Ambil dari target · ") + gName : t.kategori;
+        const icCls = dd || gt ? "dd" : t.jenis;
+        const icTxt = t.jenis === "masuk" ? "+" : t.jenis === "keluar" ? "−" : t.jenis === "setor" || t.jenis === "nabung" ? "↗" : "↘";
         html += '<div class="tx"><span class="ic ' + icCls + '" aria-hidden="true">' + icTxt + '</span><div class="what"><strong>' + esc(t.catatan || sub) + (t.contoh ? '<span class="tag">contoh</span>' : "") + "</strong><small>" + esc(sub) + "</small></div>" +
           '<span class="amt ' + cls + '">' + sign + fmt(t.jumlah) + "</span>" +
           (readOnly ? "<span></span>" : '<span class="acts"><button type="button" class="icon-btn" data-edit="' + esc(t.id) + '" aria-label="Ubah transaksi">Ubah</button><button type="button" class="icon-btn" data-del="' + esc(t.id) + '" aria-label="Hapus transaksi">Hapus</button></span>');
@@ -977,8 +1015,21 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   }
 
   /* ---------- form ---------- */
-  function fillCategories(mode, keep) {
+  function fillCategories(mode, keep, keepLabel) {
     const sel = $("f-kategori");
+    if (mode === "target") {
+      // value = "nabung|<goalId>" or "cairkan|<goalId>"
+      const gs = state.goals.map((g) => [g.id, g.nama]);
+      if (keep && keep.includes("|") && !gs.some(([id]) => id === keep.split("|")[1])) gs.push([keep.split("|")[1], (keepLabel || "Target") + " (dihapus)"]);
+      sel.innerHTML = gs.length
+        ? '<optgroup label="Tabung ke">' + gs.map(([id, n]) => '<option value="nabung|' + esc(id) + '">' + esc(n) + "</option>").join("") + "</optgroup>" +
+          '<optgroup label="Ambil dari">' + gs.map(([id, n]) => '<option value="cairkan|' + esc(id) + '">Ambil: ' + esc(n) + "</option>").join("") + "</optgroup>"
+        : '<option value="">Belum ada target, buat dulu di kartu Target tabungan</option>';
+      if (keep && [...sel.options].some((o) => o.value === keep)) sel.value = keep;
+      $("f-kat-label").textContent = "Target";
+      $("f-catatan").placeholder = "mis. Sisihkan dari gaji";
+      return;
+    }
     const opts = mode === "darurat" ? KAT_DARURAT : (mode === "masuk" ? KAT_MASUK : KAT_KELUAR).map((k) => [k, k]);
     sel.innerHTML = opts.map(([v, l]) => '<option value="' + esc(v) + '">' + esc(l) + "</option>").join("");
     if (keep && opts.some(([v]) => v === keep)) sel.value = keep;
@@ -1019,8 +1070,10 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     const t = state.tx.find((x) => x.id === id); if (!t) return;
     state.editingId = id;
     const dd = t.jenis === "setor" || t.jenis === "tarik";
-    $(dd ? "j-darurat" : "j-" + t.jenis).checked = true;
-    fillCategories(dd ? "darurat" : t.jenis, dd ? t.jenis : t.kategori);
+    const gt = isGoalTx(t);
+    $(dd ? "j-darurat" : gt ? "j-target" : "j-" + t.jenis).checked = true;
+    if (gt) fillCategories("target", t.jenis + "|" + t.goalId, t.kategori);
+    else fillCategories(dd ? "darurat" : t.jenis, dd ? t.jenis : t.kategori);
     $("f-jumlah").value = amt(t).toLocaleString("id-ID");
     $("f-tanggal").value = t.tanggal;
     $("f-catatan").value = t.catatan || "";
@@ -1039,19 +1092,27 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     msg.hidden = true;
     const mode = document.querySelector('input[name="jenis"]:checked').value;
     const prev = state.editingId ? state.tx.find((x) => x.id === state.editingId) : null;
+    let goal = null, goalJenis = null, goalId = null;
+    if (mode === "target") {
+      [goalJenis, goalId] = $("f-kategori").value.split("|");
+      if (!goalId) { msg.textContent = "Buat target dulu di kartu “Target tabungan”, lalu catat setorannya di sini."; msg.hidden = false; return; }
+      goal = state.goals.find((g) => g.id === goalId) || null;
+    }
     const data = {
-      jenis: mode === "darurat" ? $("f-kategori").value : mode,
+      jenis: mode === "darurat" ? $("f-kategori").value : mode === "target" ? goalJenis : mode,
       jumlah,
-      kategori: mode === "darurat" ? "Dana Darurat" : $("f-kategori").value,
+      kategori: mode === "darurat" ? "Dana Darurat" : mode === "target" ? (goal ? goal.nama : (prev && prev.kategori) || "Target") : $("f-kategori").value,
       tanggal,
       catatan: $("f-catatan").value.trim().slice(0, 80),
       dibuat: prev?.dibuat || new Date().toISOString(),
     };
+    if (mode === "target") data.goalId = goalId;
+    const before = goal ? goalSaved(goal) : 0;
     const id = state.editingId;
     const btn = $("f-submit"); btn.disabled = true;
     try {
       await saveTx(id, data);
-      toast(id ? "Perubahan disimpan" : data.jenis === "setor" ? "Setoran dana darurat dicatat" : data.jenis === "tarik" ? "Pengambilan dana darurat dicatat" : "Transaksi dicatat");
+      toast(id ? "Perubahan disimpan" : goal ? goalToast(goal, before, data.jenis === "cairkan", jumlah) : data.jenis === "setor" ? "Setoran dana darurat dicatat" : data.jenis === "tarik" ? "Pengambilan dana darurat dicatat" : "Transaksi dicatat");
       if (!inRange(data, curRange())) state.anchor = fromIso(tanggal);
       resetForm(); render();
     } catch (err) {
@@ -1231,11 +1292,12 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
         if (!n) return say("Isi jumlahnya dulu.");
         const g = state.goals.find((x) => x.id === f.dataset.id); if (!g) return;
         const ambil = f.dataset.arah === "ambil";
-        const after = Math.max(0, g.terkumpul + (ambil ? -n : n));
-        await saveSettings({ goals: state.goals.map((x) => (x.id === g.id ? { ...x, terkumpul: after } : x)) });
-        state.goalAdd = null; renderGoals();
-        toast(!ambil && g.target > 0 && after >= g.target && g.terkumpul < g.target ? "Selamat! Target “" + g.nama + "” tercapai 🎉"
-          : ambil ? fmt(n) + " diambil dari “" + g.nama + "”" : fmt(n) + " ditabung ke “" + g.nama + "”");
+        const before = goalSaved(g);
+        if (ambil && n > before) return say("Paling banyak " + fmt(before) + ", sesuai uang yang terkumpul.");
+        const catatan = f.querySelector('[name="catatan"]').value.trim().slice(0, 80);
+        await saveTx(null, { jenis: ambil ? "cairkan" : "nabung", jumlah: n, kategori: g.nama, goalId: g.id, tanggal: iso(new Date()), catatan, dibuat: new Date().toISOString() });
+        state.goalAdd = null; render();
+        toast(goalToast(g, before, ambil, n));
       }
     } catch (err) { handleWriteError(err, msg); }
   });
