@@ -245,7 +245,13 @@ form { display: grid; gap: 12px; }
 .cat[data-s="over"] .cat-note { color: var(--keluar); font-weight: 600; }
 .cat[data-s="warn"] .cat-note { color: var(--warn); font-weight: 600; }
 .budget-edit { display: grid; gap: 8px; }
-.budget-edit label { display: grid; grid-template-columns: 1fr 140px; gap: 10px; align-items: center; font-size: 14px; }
+.budget-edit label, .bud-row { display: grid; grid-template-columns: 1fr 140px; gap: 10px; align-items: center; font-size: 14px; }
+.bud-row { grid-template-columns: minmax(0, 1fr) 128px 34px; gap: 8px; }
+.budget-edit .bud-name { text-align: left; font-family: inherit; font-variant-numeric: normal; }
+.bud-del { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--stroke); background: transparent; color: var(--ink-soft); font-size: 18px; line-height: 1; cursor: pointer; }
+.bud-del:hover { color: var(--keluar); border-color: var(--keluar); }
+.bud-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.bud-actions .btn { flex: 1 1 auto; }
 .budget-edit input, .dd-target input { width: 100%; background: var(--field); border: 1px solid var(--stroke); border-radius: 12px; padding: 8px 12px; font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
 .muted { color: var(--ink-soft); font-size: 14px; margin: 0; }
 
@@ -331,6 +337,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   .summary { grid-template-columns: 1fr; }
   .row2 { grid-template-columns: 1fr; }
   .budget-edit label { grid-template-columns: 1fr 120px; }
+  .bud-row { grid-template-columns: minmax(0, 1fr) 108px 34px; gap: 6px; }
   .nav strong { min-width: 0; flex: 1; }
   .nav { width: 100%; }
   .chips.big { width: 100%; }
@@ -488,6 +495,8 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
 <script>
 (() => {
   const KAT_KELUAR = ["Makan & Minum", "Transportasi", "Belanja", "Tagihan & Listrik", "Pulsa & Internet", "Kesehatan", "Hiburan", "Pendidikan", "Sedekah & Zakat", "Lainnya"];
+  const katKeluar = () => (state.kat && state.kat.length ? state.kat : KAT_KELUAR);
+  const cleanKat = (a) => Array.isArray(a) ? [...new Set(a.map((k) => String(k || "").trim().slice(0, 30)).filter(Boolean))] : [];
   const KAT_MASUK = ["Gaji", "Usaha", "Bonus & THR", "Freelance", "Lainnya"];
   const KAT_DARURAT = [["setor", "Setor ke dana darurat"], ["tarik", "Ambil dari dana darurat"]];
   const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -520,7 +529,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
 
   const state = {
     mode: "loading", // loading | live | demo
-    tx: [], limits: {}, target: 0, goals: [],
+    tx: [], limits: {}, target: 0, goals: [], kat: [],
     period: "bulan", anchor: dayStart(new Date()),
     filter: "semua", q: "",
     editingId: null, confirmId: null, budgetEdit: false, targetEdit: false,
@@ -855,6 +864,11 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     box.querySelectorAll("input[data-money]").forEach(bindThousands);
   }
 
+  function budRow(k, lim) {
+    return '<div class="bud-row" data-orig="' + esc(k) + '"><input class="bud-name" maxlength="30" aria-label="Nama kategori" placeholder="Nama kategori" value="' + esc(k) + '">' +
+      '<input data-money inputmode="numeric" aria-label="Batas per bulan' + (k ? " " + esc(k) : "") + '" value="' + (lim ? Number(lim).toLocaleString("id-ID") : "") + '" placeholder="—">' +
+      '<button type="button" class="bud-del" aria-label="Hapus kategori' + (k ? " " + esc(k) : "") + '">×</button></div>';
+  }
   function renderCats() {
     const box = $("cats");
     const mr = rangeFor("bulan", state.anchor);
@@ -865,15 +879,26 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     $("b-toggle").hidden = state.mode === "loading" || readOnly;
 
     if (state.budgetEdit) {
-      box.innerHTML = '<form class="budget-edit" id="budget-form"><p class="muted">Isi batas pengeluaran per bulan. Kosongkan jika tidak perlu.</p>' +
-        KAT_KELUAR.map((k, i) => '<label><span>' + esc(k) + '</span><input id="bud-' + i + '" inputmode="numeric" data-k="' + esc(k) + '" value="' + (state.limits[k] ? Number(state.limits[k]).toLocaleString("id-ID") : "") + '" placeholder="—"></label>').join("") +
-        '<button type="submit" class="btn primary">Simpan anggaran</button></form>';
-      box.querySelectorAll("input").forEach(bindThousands);
+      box.innerHTML = '<form class="budget-edit" id="budget-form"><p class="muted">Ubah nama kategori, isi batas per bulan (kosongkan jika tidak perlu), hapus dengan ×, atau tambah kategori baru.</p>' +
+        '<div id="bud-rows">' + katKeluar().map((k) => budRow(k, state.limits[k])).join("") + '</div>' +
+        '<div class="bud-actions"><button type="button" class="btn" id="bud-add">+ Tambah kategori</button><button type="submit" class="btn primary">Simpan anggaran</button></div></form>';
+      box.querySelectorAll("input[data-money]").forEach(bindThousands);
       $("budget-form").addEventListener("submit", saveBudget);
+      $("bud-rows").addEventListener("click", (e) => {
+        const b = e.target.closest(".bud-del"); if (!b) return;
+        b.closest(".bud-row").remove();
+      });
+      $("bud-add").addEventListener("click", () => {
+        $("bud-rows").insertAdjacentHTML("beforeend", budRow("", 0));
+        const row = $("bud-rows").lastElementChild;
+        bindThousands(row.querySelector("input[data-money]"));
+        row.querySelector(".bud-name").focus();
+      });
       return;
     }
 
-    const cats = KAT_KELUAR.filter((k) => state.limits[k] > 0 || spent[k] > 0);
+    const list = katKeluar();
+    const cats = [...list, ...Object.keys(spent).filter((k) => !list.includes(k))].filter((k) => state.limits[k] > 0 || spent[k] > 0);
     if (!cats.length) {
       box.innerHTML = '<p class="muted">Belum ada pengeluaran atau anggaran di bulan ini. Pilih “Atur anggaran” untuk memberi batas tiap kategori.</p>';
       return;
@@ -1044,12 +1069,14 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       $("f-catatan").placeholder = "mis. Sisihkan dari gaji";
       return;
     }
-    const opts = mode === "darurat" ? KAT_DARURAT : (mode === "masuk" ? KAT_MASUK : KAT_KELUAR).map((k) => [k, k]);
+    const opts = mode === "darurat" ? KAT_DARURAT : (mode === "masuk" ? KAT_MASUK : katKeluar()).map((k) => [k, k]);
+    if (keep && mode === "keluar" && state.editingId && !opts.some(([v]) => v === keep)) opts.push([keep, keep]);
     sel.innerHTML = opts.map(([v, l]) => '<option value="' + esc(v) + '">' + esc(l) + "</option>").join("");
     if (keep && opts.some(([v]) => v === keep)) sel.value = keep;
     $("f-kat-label").textContent = mode === "darurat" ? "Arah" : "Kategori";
     $("f-catatan").placeholder = mode === "darurat" ? "mis. Sisihkan dari gaji" : mode === "masuk" ? "mis. Gaji November" : "mis. Makan siang warteg";
   }
+  function refreshKeluarOpts() { if ($("j-keluar").checked) fillCategories("keluar", $("f-kategori").value); }
   function bindThousands(input) {
     input.addEventListener("input", () => {
       const n = parseAmount(input.value);
@@ -1159,16 +1186,36 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     await store.txCol.doc(id).delete();
   }
   async function saveSettings(patch) {
-    const next = { limits: state.limits, targetDarurat: state.target || 0, goals: state.goals, ...patch };
+    const next = { limits: state.limits, targetDarurat: state.target || 0, goals: state.goals, kategoriKeluar: state.kat || [], ...patch };
     if (state.mode === "live") await store.settingsDoc.set(next);
-    state.limits = next.limits; state.target = next.targetDarurat; state.goals = next.goals;
+    state.limits = next.limits; state.target = next.targetDarurat; state.goals = next.goals; state.kat = next.kategoriKeluar;
     persist();
   }
   async function saveBudget(e) {
     e.preventDefault();
-    const limits = {};
-    e.target.querySelectorAll("input[data-k]").forEach((i) => { const n = parseAmount(i.value); if (n) limits[i.dataset.k] = n; });
-    try { await saveSettings({ limits }); state.budgetEdit = false; render(); toast("Anggaran disimpan"); }
+    const limits = {}, kat = [], renames = {};
+    for (const row of e.target.querySelectorAll(".bud-row")) {
+      const name = row.querySelector(".bud-name").value.trim().slice(0, 30);
+      const orig = row.dataset.orig;
+      if (!name) { if (orig) { toast("Nama kategori tidak boleh kosong"); row.querySelector(".bud-name").focus(); return; } continue; }
+      if (kat.includes(name)) { toast("Kategori “" + name + "” ada dua kali"); row.querySelector(".bud-name").focus(); return; }
+      kat.push(name);
+      const n = parseAmount(row.querySelector("input[data-money]").value);
+      if (n) limits[name] = n;
+      if (orig && orig !== name) renames[orig] = name;
+    }
+    if (!kat.length) { toast("Sisakan minimal satu kategori"); return; }
+    const same = kat.length === KAT_KELUAR.length && kat.every((k, i) => k === KAT_KELUAR[i]);
+    try {
+      // Renamed categories: move this category's past transactions to the new name too.
+      const moved = state.tx.filter((t) => t.jenis === "keluar" && renames[t.kategori]);
+      if (moved.length) {
+        if (state.mode === "live") { for (const t of moved) { const { id, ...rest } = t; await store.txCol.doc(id).set({ ...rest, kategori: renames[t.kategori] }); } }
+        else moved.forEach((t) => { t.kategori = renames[t.kategori]; });
+      }
+      await saveSettings({ limits, kategoriKeluar: same ? [] : kat });
+      state.budgetEdit = false; render(); refreshKeluarOpts(); toast("Anggaran disimpan");
+    }
     catch (err) { handleWriteError(err); }
   }
   async function saveTarget(e) {
@@ -1229,7 +1276,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     if (state.mode !== "lokal") return;
     try {
       localStorage.setItem(LS_TX, JSON.stringify(state.tx));
-      localStorage.setItem(LS_SET, JSON.stringify({ limits: state.limits, targetDarurat: state.target || 0, goals: state.goals }));
+      localStorage.setItem(LS_SET, JSON.stringify({ limits: state.limits, targetDarurat: state.target || 0, goals: state.goals, kategoriKeluar: state.kat || [] }));
     } catch (_) { toast("Penyimpanan HP penuh. Hapus beberapa transaksi lama lalu coba lagi."); }
   }
   function startLocal() {
@@ -1241,8 +1288,10 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       state.limits = s.limits && typeof s.limits === "object" ? s.limits : {};
       state.target = Number(s.targetDarurat) > 0 ? Number(s.targetDarurat) : 0;
       state.goals = cleanGoals(s.goals);
-    } catch (_) { state.tx = []; state.limits = {}; state.target = 0; state.goals = []; }
+      state.kat = cleanKat(s.kategoriKeluar);
+    } catch (_) { state.tx = []; state.limits = {}; state.target = 0; state.goals = []; state.kat = []; }
     render();
+    refreshKeluarOpts();
   }
 
   function startDemo() {
@@ -1251,6 +1300,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     state.limits = { ...EXAMPLE_LIMITS };
     state.target = EXAMPLE_TARGET;
     state.goals = exampleGoals();
+    state.kat = [];
     render();
   }
 
@@ -1382,6 +1432,8 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       state.limits = (d && d.limits && typeof d.limits === "object") ? { ...d.limits } : {};
       state.target = d && Number(d.targetDarurat) > 0 ? Number(d.targetDarurat) : 0;
       state.goals = cleanGoals(d && d.goals);
+      state.kat = cleanKat(d && d.kategoriKeluar);
+      refreshKeluarOpts();
       if (!state.goalEdit && !state.goalAdd) renderGoals();
       if (!state.budgetEdit) renderCats();
       if (!state.targetEdit) renderDarurat();
