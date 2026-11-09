@@ -139,7 +139,7 @@ header.top { display: grid; gap: 22px; justify-items: center; }
   outline: 2px solid rgba(255, 255, 255, 0.92); outline-offset: 5px;
 }
 .stat.main::before { background: linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.1)); }
-.stat.tab { grid-column: span 2; }
+.stat .bar { margin-top: 4px; }
 .label { font-size: 12px; font-weight: 700; text-transform: lowercase; letter-spacing: 0; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; }
 .stat .label::before { counter-increment: stat; content: "0" counter(stat); font-size: 11px; font-weight: 600; color: var(--ink); padding: 1px 9px; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 999px; }
 .stat .val { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 600; letter-spacing: -0.04em; overflow-wrap: anywhere; line-height: 1.1; }
@@ -159,8 +159,7 @@ header.top { display: grid; gap: 22px; justify-items: center; }
 
 /* form */
 form { display: grid; gap: 12px; }
-.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-@media (max-width: 520px) { .seg { grid-template-columns: repeat(2, 1fr); } }
+.seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
 .seg label { text-align: center; padding: 8px 4px; border-radius: 999px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--ink-soft); background: var(--glass); border: 1px solid var(--stroke); }
 .seg input:checked + label { background: var(--pill); color: #fff; border-color: rgba(255, 255, 255, 0.25); box-shadow: 0 6px 18px -6px rgba(170, 80, 255, 0.8); }
@@ -311,7 +310,6 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   .cols { grid-template-columns: minmax(0, 1fr); }
   .summary { grid-template-columns: 1fr 1fr; }
   .stat.main { grid-column: 1 / -1; grid-row: auto; min-height: 200px; }
-  .stat.tab { grid-column: 1 / -1; }
   .dock {
     display: flex; position: fixed; z-index: 25; left: 0; right: 0;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
@@ -378,6 +376,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     <div class="stat"><span class="label">Pemasukan</span><span class="val pos" id="s-masuk">Rp 0</span><span class="sub" id="s-masuk-n">0 transaksi</span></div>
     <div class="stat"><span class="label">Pengeluaran</span><span class="val neg" id="s-keluar">Rp 0</span><span class="sub" id="s-avg">rata-rata Rp 0 per hari</span></div>
     <div class="stat tab"><span class="label">Ke dana darurat</span><span class="val acc" id="s-tabung">Rp 0</span><span class="sub" id="s-tabung-sub">disetor di periode ini</span></div>
+    <div class="stat goal-stat"><span class="label">Terkumpul di target</span><span class="val acc" id="s-target">Rp 0</span><div class="bar" id="s-target-bar" role="progressbar" aria-label="Kemajuan semua target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="width:0.0%"></i></div><span class="sub" id="s-target-sub">Belum ada target tabungan</span></div>
   </section>
 
   <div class="cols">
@@ -824,8 +823,23 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     return ambil ? fmt(n) + " diambil dari “" + g.nama + "”" : "+" + fmt(n) + " ditabung ke “" + g.nama + "” · sekarang " + fmt(after);
   }
 
+  function renderGoalStat() {
+    const total = state.goals.reduce((a, g) => a + goalSaved(g), 0);
+    const goal = state.goals.reduce((a, g) => a + g.target, 0);
+    const done = state.goals.filter((g) => g.target > 0 && goalSaved(g) >= g.target).length;
+    const pct = goal > 0 ? Math.min(100, (total / goal) * 100) : 0;
+    $("s-target").textContent = fmt(total);
+    const bar = $("s-target-bar");
+    bar.hidden = !state.goals.length;
+    bar.setAttribute("aria-valuenow", String(Math.round(pct)));
+    bar.querySelector("i").setAttribute("style", "width:" + pct.toFixed(1) + "%");
+    $("s-target-sub").textContent = !state.goals.length ? "Belum ada target tabungan"
+      : Math.floor(pct) + "% dari total target " + fmt(goal) + " · " + done + " dari " + state.goals.length + " tercapai";
+  }
+
   function renderGoals() {
     const box = $("goals");
+    renderGoalStat();
     if ($("j-target").checked) fillCategories("target", $("f-kategori").value);
     const canEdit = !readOnly && state.mode !== "loading";
     $("g-add-btn").hidden = !canEdit || state.goalEdit === "new";
