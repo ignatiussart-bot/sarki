@@ -10,12 +10,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sarkom Kas">
+<meta name="apple-mobile-web-app-title" content="Icil Kas">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script>window.BUKU_KAS_LOKAL = true; window.BUKU_KAS_NAMA = "Icil";</script>
 </head>
 <body>
-<title>Sarkom Kas</title>
+<title>Icil Kas</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
 /* Layout: a black "glow glass" app — neon ribbons (peach → pink → violet) glowing behind frosted cards with gradient edges, tight lowercase Manrope headings, pill buttons. Centered greeting hero, bento summary, entry/fund/budget column beside recap/chart/journal; one column with a floating bottom bar on phones. Deliberately single dark theme. */
@@ -198,6 +198,29 @@ form { display: grid; gap: 12px; }
 .dd-target { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
 .hint { font-size: 13px; color: var(--ink-soft); margin: 0; }
 
+/* savings goals */
+.goals { display: grid; gap: 12px; }
+.goal { position: relative; display: grid; gap: 10px; padding: 14px 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--stroke); }
+.goal[data-done] { border-color: rgba(126, 227, 196, 0.45); background: linear-gradient(160deg, rgba(126, 227, 196, 0.10), rgba(255, 255, 255, 0.03)); }
+.goal[data-done] .bar i { background: linear-gradient(90deg, #3FB894, var(--masuk)); }
+.goal[data-done] .bar i::after { box-shadow: 0 0 10px 3px rgba(126, 227, 196, 0.8); }
+.goal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.goal-name { font-weight: 700; font-size: 16px; letter-spacing: -0.02em; overflow-wrap: anywhere; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.goal-sub { font-size: 13px; color: var(--ink-soft); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.goal-pct { font-family: var(--font-display); font-weight: 600; font-size: 26px; letter-spacing: -0.045em; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 0 20px rgba(197, 139, 255, 0.5); white-space: nowrap; }
+.goal[data-done] .goal-pct { color: var(--masuk); text-shadow: 0 0 20px rgba(126, 227, 196, 0.5); }
+.goal-badge { font-size: 11px; font-weight: 700; color: #08251C; background: var(--masuk); border-radius: 999px; padding: 2px 9px; }
+.goal-plan { font-size: 13px; color: var(--ink); background: var(--chip); border-radius: 12px; padding: 7px 11px; margin: 0; }
+.goal-plan.late { background: rgba(255, 143, 174, 0.14); color: var(--keluar); }
+.goal-actions { display: flex; gap: 6px; }
+.goal-actions .btn { flex: 1 1 auto; min-width: 0; padding: 8px 6px; font-size: 13px; white-space: nowrap; }
+.goal-actions .btn.grow { flex-grow: 2; }
+.goal-form { display: grid; gap: 10px; padding: 14px 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--stroke-hi); }
+.goal-form input { width: 100%; background: var(--field); border: 1px solid var(--stroke); border-radius: 14px; padding: 10px 12px; color: var(--ink); font: inherit; }
+.goal-form input[data-money] { text-align: right; font-variant-numeric: tabular-nums; }
+.goal-form .row-btn { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.goal-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+
 /* bars */
 .cats { display: grid; gap: 16px; }
 .cat { display: grid; gap: 7px; }
@@ -314,7 +337,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
 
 <div class="wrap">
   <header class="top" id="sek-atas">
-    <div class="topbar"><span class="brand-pill">Sarkom Kas <span class="beta">IDR</span></span></div>
+    <div class="topbar"><span class="brand-pill">Icil Kas <span class="beta">IDR</span></span></div>
     <div class="hero">
       <span class="hero-logo"><img src="data:image/png;base64,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" alt="Logo SIXX" width="35" height="72"></span>
       <p class="greet" id="greet">Selamat datang!</p>
@@ -384,6 +407,14 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
         <div class="dd" id="dd"></div>
       </section>
 
+      <section class="card" aria-labelledby="g-title">
+        <div class="card-head">
+          <h2 id="g-title">Target tabungan</h2>
+          <button type="button" class="btn small" id="g-add-btn">+ Target baru</button>
+        </div>
+        <div class="goals" id="goals"></div>
+      </section>
+
       <section class="card" aria-labelledby="b-title">
         <div class="card-head">
           <h2 id="b-title">Anggaran bulan ini</h2>
@@ -440,6 +471,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   <button type="button" data-go="r-title" aria-label="Rekap per periode"><svg viewBox="0 0 24 24"><path d="M5 19V11M12 19V5M19 19v-6"/></svg></button>
   <button type="button" class="plus" data-go="f-title" aria-label="Catat transaksi"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
   <button type="button" data-go="dd-title" aria-label="Dana darurat"><svg viewBox="0 0 24 24"><path d="M12 4 5 7v5c0 4 3 6.5 7 8 4-1.5 7-4 7-8V7z"/></svg></button>
+  <button type="button" data-go="g-title" aria-label="Target tabungan"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></button>
   <button type="button" data-go="l-title" aria-label="Riwayat transaksi"><svg viewBox="0 0 24 24"><path d="M8 7h11M8 12h11M8 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01"/></svg></button>
 </nav>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -478,10 +510,11 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
 
   const state = {
     mode: "loading", // loading | live | demo
-    tx: [], limits: {}, target: 0,
+    tx: [], limits: {}, target: 0, goals: [],
     period: "bulan", anchor: dayStart(new Date()),
     filter: "semua", q: "",
     editingId: null, confirmId: null, budgetEdit: false, targetEdit: false,
+    goalEdit: null, goalAdd: null, goalConfirm: null, // goalEdit: "new" | goal id; goalAdd: { id, arah }
   };
   // Inside the Android app there is no claude.ai account: data lives on the phone.
   const LOCAL_APP = !!(window.BUKU_KAS_LOKAL || (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()));
@@ -581,10 +614,23 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   }
   const EXAMPLE_LIMITS = { "Makan & Minum": 1200000, "Transportasi": 500000, "Belanja": 900000, "Tagihan & Listrik": 2200000, "Pulsa & Internet": 500000, "Hiburan": 300000 };
   const EXAMPLE_TARGET = 30000000;
+  function exampleGoals() {
+    const t = new Date();
+    const later = (m) => iso(new Date(t.getFullYear(), t.getMonth() + m, 1));
+    return [
+      { id: "gcontoh1", nama: "Beli HP baru", target: 5000000, terkumpul: 3250000, tenggat: later(4), contoh: true },
+      { id: "gcontoh2", nama: "Liburan ke Bali", target: 8000000, terkumpul: 1200000, tenggat: later(9), contoh: true },
+      { id: "gcontoh3", nama: "Kado ulang tahun", target: 750000, terkumpul: 750000, tenggat: "", contoh: true },
+    ];
+  }
+  const cleanGoals = (a) => Array.isArray(a) ? a.filter((g) => g && g.id && typeof g.nama === "string").map((g) => ({
+    id: String(g.id), nama: g.nama.slice(0, 40), target: Number(g.target) || 0, terkumpul: Math.max(0, Number(g.terkumpul) || 0),
+    tenggat: typeof g.tenggat === "string" && /^\d{4}-\d{2}-\d{2}$/.test(g.tenggat) ? g.tenggat : "", contoh: !!g.contoh,
+  })) : [];
 
   /* ---------- render ---------- */
   function render() {
-    renderStatus(); renderControls(); renderSummary(); renderDarurat(); renderCats(); renderRekap(); renderChart(); renderList();
+    renderStatus(); renderControls(); renderSummary(); renderDarurat(); renderGoals(); renderCats(); renderRekap(); renderChart(); renderList();
   }
 
   function renderStatus() {
@@ -684,6 +730,79 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     if (f) { bindThousands($("dd-target-input")); f.addEventListener("submit", saveTarget); }
     const s = $("dd-setor"); if (s) s.addEventListener("click", () => prepDarurat("setor"));
     const tk = $("dd-tarik"); if (tk) tk.addEventListener("click", () => prepDarurat("tarik"));
+  }
+
+  const tglPendek = (d) => d.getDate() + " " + BLN3[d.getMonth()] + " " + d.getFullYear();
+  const roundUp = (n, step) => Math.ceil(n / step) * step;
+
+  function goalPlan(g, kurang) {
+    if (!g.tenggat || kurang <= 0) return "";
+    const end = fromIso(g.tenggat);
+    const days = Math.round((end - dayStart(new Date())) / 864e5);
+    if (days < 0) return '<p class="goal-plan late">Tenggat ' + tglPendek(end) + " sudah lewat · kurang " + fmt(kurang) + "</p>";
+    if (days === 0) return '<p class="goal-plan">Tenggatnya hari ini · kurang ' + fmt(kurang) + "</p>";
+    if (days <= 31) return '<p class="goal-plan">Sisa ' + days + " hari · tabung sekitar " + fmt(roundUp(kurang / days, 1000)) + " per hari</p>";
+    const bulan = Math.max(1, Math.round(days / 30.44));
+    return '<p class="goal-plan">Sisa ' + bulan + " bulan · tabung sekitar " + fmt(roundUp(kurang / bulan, 1000)) + " per bulan</p>";
+  }
+
+  function goalForm(g) {
+    const v = (n) => (n ? Number(n).toLocaleString("id-ID") : "");
+    return '<form class="goal-form" data-form="goal" novalidate>' +
+      '<label class="field"><span>Nama target</span><input name="nama" id="g-nama" maxlength="40" placeholder="mis. Beli HP baru" value="' + esc(g ? g.nama : "") + '"></label>' +
+      '<div class="row2"><label class="field"><span>Jumlah target (Rp)</span><input name="target" data-money inputmode="numeric" placeholder="5.000.000" value="' + v(g && g.target) + '"></label>' +
+      '<label class="field"><span>Sudah terkumpul (Rp)</span><input name="terkumpul" data-money inputmode="numeric" placeholder="0" value="' + v(g && g.terkumpul) + '"></label></div>' +
+      '<label class="field"><span>Tenggat (boleh dikosongkan)</span><input name="tenggat" type="date" value="' + esc(g ? g.tenggat : "") + '"></label>' +
+      '<p class="form-msg" hidden></p>' +
+      '<div class="row-btn"><button type="submit" class="btn primary">' + (g ? "Simpan perubahan" : "Buat target") + '</button><button type="button" class="btn" data-act="batal">Batal</button></div></form>';
+  }
+
+  function goalCard(g, canEdit) {
+    const kumpul = g.terkumpul, tgt = g.target;
+    const pctRaw = tgt > 0 ? (kumpul / tgt) * 100 : 0;
+    const done = tgt > 0 && kumpul >= tgt;
+    const kurang = tgt - kumpul;
+    const pctText = done ? "100%" : Math.min(99, Math.floor(pctRaw)) + "%";
+    let html = '<article class="goal"' + (done ? " data-done" : "") + ">" +
+      '<div class="goal-top"><div><div class="goal-name">' + esc(g.nama) + (done ? '<span class="goal-badge">tercapai</span>' : "") + "</div>" +
+      '<div class="goal-sub">' + fmt(kumpul) + " dari " + fmt(tgt) + "</div></div>" +
+      '<div class="goal-pct">' + pctText + "</div></div>" +
+      '<div class="bar thick" role="progressbar" aria-label="Kemajuan ' + esc(g.nama) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(Math.min(100, pctRaw)) + '"><i style="width:' + Math.min(100, pctRaw).toFixed(1) + '%"></i></div>' +
+      '<div class="dd-meta"><span>' + (done ? "Target tercapai" : "kurang " + fmt(kurang)) + "</span><span>" + (g.tenggat ? "tenggat " + tglPendek(fromIso(g.tenggat)) : "tanpa tenggat") + "</span></div>" +
+      goalPlan(g, kurang);
+    if (canEdit) {
+      const add = state.goalAdd && state.goalAdd.id === g.id ? state.goalAdd : null;
+      if (add) {
+        html += '<form class="goal-form" data-form="isi" data-id="' + esc(g.id) + '" data-arah="' + add.arah + '" novalidate>' +
+          '<label class="field"><span>' + (add.arah === "ambil" ? "Jumlah yang diambil (Rp)" : "Jumlah yang ditabung (Rp)") + '</span><input name="jumlah" data-money inputmode="numeric" placeholder="' + (add.arah === "ambil" ? "0" : (kurang > 0 ? Number(roundUp(Math.min(kurang, 500000), 1000)).toLocaleString("id-ID") : "0")) + '"></label>' +
+          '<p class="form-msg" hidden></p>' +
+          '<div class="row-btn"><button type="submit" class="btn primary">' + (add.arah === "ambil" ? "Ambil" : "Tabung") + '</button><button type="button" class="btn" data-act="batal">Batal</button></div></form>';
+      } else if (state.goalConfirm === g.id) {
+        html += '<div class="goal-confirm"><span>Hapus target ini?</span><button type="button" class="btn small danger" data-act="yakin" data-id="' + esc(g.id) + '">Ya, hapus</button><button type="button" class="btn small" data-act="batal">Batal</button></div>';
+      } else {
+        html += '<div class="goal-actions">' +
+          (done ? "" : '<button type="button" class="btn grow" data-act="tambah" data-id="' + esc(g.id) + '">+ Tabung</button>') +
+          (kumpul > 0 ? '<button type="button" class="btn' + (done ? " grow" : "") + '" data-act="ambil" data-id="' + esc(g.id) + '">Ambil</button>' : "") +
+          '<button type="button" class="btn" data-act="ubah" data-id="' + esc(g.id) + '">Ubah</button>' +
+          '<button type="button" class="btn danger" data-act="hapus" data-id="' + esc(g.id) + '">Hapus</button></div>';
+      }
+    }
+    return html + "</article>";
+  }
+
+  function renderGoals() {
+    const box = $("goals");
+    const canEdit = !readOnly && state.mode !== "loading";
+    $("g-add-btn").hidden = !canEdit || state.goalEdit === "new";
+    let html = state.goalEdit === "new" ? goalForm(null) : "";
+    if (!state.goals.length && state.goalEdit !== "new") {
+      html += '<p class="hint">Belum ada target. Buat target seperti “Beli HP” atau “Liburan”, isi jumlahnya, lalu tabung sedikit demi sedikit sampai tercapai.</p>';
+    }
+    // Targets still in progress first, finished ones at the bottom.
+    const order = [...state.goals].sort((a, b) => (a.target > 0 && a.terkumpul >= a.target) - (b.target > 0 && b.terkumpul >= b.target));
+    for (const g of order) html += state.goalEdit === g.id ? goalForm(g) : goalCard(g, canEdit);
+    box.innerHTML = html;
+    box.querySelectorAll("input[data-money]").forEach(bindThousands);
   }
 
   function renderCats() {
@@ -965,9 +1084,9 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     await store.txCol.doc(id).delete();
   }
   async function saveSettings(patch) {
-    const next = { limits: state.limits, targetDarurat: state.target || 0, ...patch };
+    const next = { limits: state.limits, targetDarurat: state.target || 0, goals: state.goals, ...patch };
     if (state.mode === "live") await store.settingsDoc.set(next);
-    state.limits = next.limits; state.target = next.targetDarurat;
+    state.limits = next.limits; state.target = next.targetDarurat; state.goals = next.goals;
     persist();
   }
   async function saveBudget(e) {
@@ -991,6 +1110,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       await saveSettings({
         limits: Object.keys(state.limits).length ? state.limits : EXAMPLE_LIMITS,
         targetDarurat: state.target || EXAMPLE_TARGET,
+        goals: state.goals.length ? state.goals : exampleGoals(),
       });
       render();
       toast("Data contoh ditambahkan. Hapus kapan saja lewat “Hapus data contoh”.");
@@ -1000,7 +1120,9 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     const btn = $("clear-examples"); btn.disabled = true;
     try {
       if (state.mode === "live") { for (const t of state.tx.filter((x) => x.contoh)) await store.txCol.doc(t.id).delete(); }
-      else { state.tx = state.tx.filter((x) => !x.contoh); persist(); render(); }
+      else { state.tx = state.tx.filter((x) => !x.contoh); persist(); }
+      if (state.goals.some((g) => g.contoh)) await saveSettings({ goals: state.goals.filter((g) => !g.contoh) });
+      render();
       toast("Data contoh dihapus");
     } catch (err) { handleWriteError(err); }
     finally { btn.disabled = false; }
@@ -1032,7 +1154,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     if (state.mode !== "lokal") return;
     try {
       localStorage.setItem(LS_TX, JSON.stringify(state.tx));
-      localStorage.setItem(LS_SET, JSON.stringify({ limits: state.limits, targetDarurat: state.target || 0 }));
+      localStorage.setItem(LS_SET, JSON.stringify({ limits: state.limits, targetDarurat: state.target || 0, goals: state.goals }));
     } catch (_) { toast("Penyimpanan HP penuh. Hapus beberapa transaksi lama lalu coba lagi."); }
   }
   function startLocal() {
@@ -1043,7 +1165,8 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       const s = JSON.parse(localStorage.getItem(LS_SET) || "{}") || {};
       state.limits = s.limits && typeof s.limits === "object" ? s.limits : {};
       state.target = Number(s.targetDarurat) > 0 ? Number(s.targetDarurat) : 0;
-    } catch (_) { state.tx = []; state.limits = {}; state.target = 0; }
+      state.goals = cleanGoals(s.goals);
+    } catch (_) { state.tx = []; state.limits = {}; state.target = 0; state.goals = []; }
     render();
   }
 
@@ -1052,6 +1175,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     state.tx = exampleSet().map((t, i) => ({ ...t, id: "d" + i }));
     state.limits = { ...EXAMPLE_LIMITS };
     state.target = EXAMPLE_TARGET;
+    state.goals = exampleGoals();
     render();
   }
 
@@ -1068,6 +1192,53 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   $("f-cancel").addEventListener("click", resetForm);
   $("b-toggle").addEventListener("click", () => { state.budgetEdit = !state.budgetEdit; renderCats(); });
   $("dd-target-btn").addEventListener("click", () => { state.targetEdit = !state.targetEdit; renderDarurat(); });
+  $("g-add-btn").addEventListener("click", () => {
+    state.goalEdit = "new"; state.goalAdd = null; state.goalConfirm = null; renderGoals();
+    $("g-nama").focus();
+  });
+  $("goals").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-act]"); if (!b) return;
+    const id = b.dataset.id, act = b.dataset.act;
+    if (act === "tambah" || act === "ambil") {
+      state.goalAdd = { id, arah: act }; state.goalConfirm = null; state.goalEdit = null; renderGoals();
+      const i = $("goals").querySelector('form[data-form="isi"] input'); if (i) i.focus();
+    } else if (act === "ubah") { state.goalEdit = id; state.goalAdd = null; state.goalConfirm = null; renderGoals(); $("g-nama").focus(); }
+    else if (act === "hapus") { state.goalConfirm = id; state.goalAdd = null; renderGoals(); }
+    else if (act === "batal") { state.goalEdit = null; state.goalAdd = null; state.goalConfirm = null; renderGoals(); }
+    else if (act === "yakin") {
+      try { await saveSettings({ goals: state.goals.filter((g) => g.id !== id) }); state.goalConfirm = null; renderGoals(); toast("Target dihapus"); }
+      catch (err) { handleWriteError(err); }
+    }
+  });
+  $("goals").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, msg = f.querySelector(".form-msg");
+    const say = (t) => { msg.textContent = t; msg.hidden = false; };
+    const val = (n) => f.querySelector('[name="' + n + '"]').value;
+    try {
+      if (f.dataset.form === "goal") {
+        const nama = val("nama").trim(), target = parseAmount(val("target")), terkumpul = parseAmount(val("terkumpul")), tenggat = val("tenggat");
+        if (!nama) return say("Isi nama targetnya dulu.");
+        if (!target) return say("Isi jumlah target yang ingin dicapai.");
+        const editId = state.goalEdit !== "new" ? state.goalEdit : null;
+        const old = editId ? state.goals.find((g) => g.id === editId) : null;
+        const g = { id: editId || "g" + newId().slice(1), nama, target, terkumpul, tenggat, contoh: !!(old && old.contoh) };
+        await saveSettings({ goals: editId ? state.goals.map((x) => (x.id === editId ? g : x)) : [...state.goals, g] });
+        state.goalEdit = null; renderGoals();
+        toast(editId ? "Target diperbarui" : "Target “" + nama + "” dibuat");
+      } else if (f.dataset.form === "isi") {
+        const n = parseAmount(val("jumlah"));
+        if (!n) return say("Isi jumlahnya dulu.");
+        const g = state.goals.find((x) => x.id === f.dataset.id); if (!g) return;
+        const ambil = f.dataset.arah === "ambil";
+        const after = Math.max(0, g.terkumpul + (ambil ? -n : n));
+        await saveSettings({ goals: state.goals.map((x) => (x.id === g.id ? { ...x, terkumpul: after } : x)) });
+        state.goalAdd = null; renderGoals();
+        toast(!ambil && g.target > 0 && after >= g.target && g.terkumpul < g.target ? "Selamat! Target “" + g.nama + "” tercapai 🎉"
+          : ambil ? fmt(n) + " diambil dari “" + g.nama + "”" : fmt(n) + " ditabung ke “" + g.nama + "”");
+      }
+    } catch (err) { handleWriteError(err, msg); }
+  });
   document.querySelectorAll("#filters button").forEach((b) => b.addEventListener("click", () => { state.filter = b.dataset.f; renderList(); }));
   $("q").addEventListener("input", (e) => { state.q = e.target.value; renderList(); });
   $("clear-examples").addEventListener("click", clearExamples);
@@ -1134,6 +1305,8 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
       const d = snap.exists ? snap.data() : null;
       state.limits = (d && d.limits && typeof d.limits === "object") ? { ...d.limits } : {};
       state.target = d && Number(d.targetDarurat) > 0 ? Number(d.targetDarurat) : 0;
+      state.goals = cleanGoals(d && d.goals);
+      if (!state.goalEdit && !state.goalAdd) renderGoals();
       if (!state.budgetEdit) renderCats();
       if (!state.targetEdit) renderDarurat();
     }, () => {});
