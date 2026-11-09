@@ -1439,15 +1439,21 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     });
     // stagger index for rows already on the page (rows drawn later appear at once)
     const index = (root) => root.querySelectorAll("table.rekap tbody tr, .cat, .goal, .tx, .day-head").forEach((r, i) => r.style.setProperty("--i", Math.min(i, 8)));
+    // plays every time a block comes into view: in when 8% of it is on screen, reset once it has fully left
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
-        if (!e.isIntersecting) return;
+        if (!e.isIntersecting || e.target.classList.contains("in")) return;
         index(e.target);
         e.target.classList.add("in");
-        io.unobserve(e.target);
       });
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
-    items.forEach((el) => io.observe(el));
+    const out = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting || e.target.contains(document.activeElement)) return;
+        e.target.classList.remove("in");
+      });
+    }, { threshold: 0 });
+    items.forEach((el) => { io.observe(el); out.observe(el); });
     // safety net: anything already on screen is shown even if the observer never fires
     setTimeout(() => items.forEach((el) => { if (el.getBoundingClientRect().top < innerHeight) { index(el); el.classList.add("in"); } }), 2500);
   })();
