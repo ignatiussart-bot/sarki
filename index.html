@@ -345,23 +345,7 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   .tx { grid-template-columns: auto minmax(0, 1fr) auto; }
   .tx .acts { grid-column: 2 / -1; justify-content: flex-end; }
 }
-/* swipe pages (phones and tablets): built by JS, see "swipe pages" */
-html.paged, html.paged body { height: 100%; overflow: hidden; }
-html.paged body { padding: 0; }
-html.paged .wrap { display: none; }
-.pager { position: fixed; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.pager::-webkit-scrollbar { display: none; }
-.page {
-  flex: 0 0 100%; min-width: 0; height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain;
-  scroll-snap-align: start; scroll-snap-stop: always;
-  display: grid; gap: 22px; align-content: start; grid-template-columns: minmax(0, 640px); justify-content: center;
-  padding: calc(18px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(110px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-}
-.page:focus { outline: none; }
-.pager-dots { position: fixed; z-index: 24; left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: rgba(20, 10, 30, 0.7); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); pointer-events: none; }
-.pager-dots i { width: 6px; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.28); transition: width .25s, background .25s; }
-.pager-dots i.on { width: 18px; background: var(--lav); }
-@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } .pager-dots i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
 </style>
 
 <div class="wrap">
@@ -390,7 +374,7 @@ html.paged .wrap { display: none; }
 
   <div class="status" id="status" data-mode="loading"><span class="dot"></span><span id="status-text">Memuat catatanmu…</span></div>
 
-  <section class="summary" id="sek-ringkas" aria-label="Ringkasan periode">
+  <section class="summary" aria-label="Ringkasan periode">
     <div class="stat main">
       <span class="label">Sisa uang</span>
       <span class="val" id="s-sisa">Rp 0</span>
@@ -500,7 +484,7 @@ html.paged .wrap { display: none; }
 </div>
 <nav class="dock" aria-label="Navigasi cepat">
   <button type="button" data-go="sek-atas" aria-label="Ringkasan"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg></button>
-  <button type="button" data-go="r-title" aria-label="Rekap dan anggaran"><svg viewBox="0 0 24 24"><path d="M5 19V11M12 19V5M19 19v-6"/></svg></button>
+  <button type="button" data-go="r-title" aria-label="Rekap per periode"><svg viewBox="0 0 24 24"><path d="M5 19V11M12 19V5M19 19v-6"/></svg></button>
   <button type="button" class="plus" data-go="f-title" aria-label="Catat transaksi"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
   <button type="button" data-go="dd-title" aria-label="Dana darurat"><svg viewBox="0 0 24 24"><path d="M12 4 5 7v5c0 4 3 6.5 7 8 4-1.5 7-4 7-8V7z"/></svg></button>
   <button type="button" data-go="g-title" aria-label="Target tabungan"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></button>
@@ -1114,7 +1098,6 @@ html.paged .wrap { display: none; }
     $("form-msg").hidden = true;
   }
   function focusForm() {
-    if (pager.isConnected) { showPage("f-title"); return; }
     $("form").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     $("f-jumlah").focus({ preventScroll: true });
   }
@@ -1398,72 +1381,7 @@ html.paged .wrap { display: none; }
     }
   });
 
-  /* ---------- swipe pages (phones and tablets) ---------- */
-  // Each part of the app becomes its own page; swipe left/right or tap the dock to move between them.
-  const sec = (id) => $(id).closest("section");
-  const PAGES = [
-    { go: "sek-atas", name: "Ringkasan", els: () => [$("sek-atas"), $("status"), $("sek-ringkas")] },
-    { go: "r-title", name: "Rekap dan anggaran", els: () => [sec("r-title"), sec("c-title"), sec("b-title")] },
-    { go: "f-title", name: "Catat transaksi", els: () => [sec("f-title")] },
-    { go: "dd-title", name: "Dana darurat", els: () => [sec("dd-title")] },
-    { go: "g-title", name: "Target tabungan", els: () => [sec("g-title")] },
-    { go: "l-title", name: "Riwayat transaksi", els: () => [sec("l-title")] },
-  ];
-  const pager = document.createElement("div"); pager.className = "pager"; pager.id = "pager";
-  const dots = document.createElement("div"); dots.className = "pager-dots"; dots.setAttribute("aria-hidden", "true");
-  dots.innerHTML = PAGES.map(() => "<i></i>").join("");
-  const homes = new Map();
-  let curPage = 0;
-  const smooth = () => (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
-  function markPage(i) {
-    curPage = i;
-    document.querySelectorAll(".dock button").forEach((b) => b.setAttribute("aria-current", String(b.dataset.go === PAGES[i].go)));
-    [...dots.children].forEach((d, k) => d.classList.toggle("on", k === i));
-  }
-  function showPage(go, instant) {
-    const i = Math.max(0, PAGES.findIndex((p) => p.go === go));
-    pager.scrollTo({ left: i * pager.clientWidth, behavior: instant ? "auto" : smooth() });
-    markPage(i);
-  }
-  function enterPager() {
-    if (pager.isConnected) return;
-    PAGES.forEach((p) => {
-      const pg = document.createElement("div");
-      pg.className = "page"; pg.setAttribute("role", "region"); pg.setAttribute("aria-label", p.name); pg.tabIndex = -1;
-      p.els().forEach((el) => { const ph = document.createComment("pindah"); el.before(ph); homes.set(el, ph); pg.append(el); });
-      pager.append(pg);
-    });
-    document.querySelector(".dock").before(pager, dots);
-    document.documentElement.classList.add("paged");
-    showPage(PAGES[curPage].go, true);
-  }
-  function leavePager() {
-    if (!pager.isConnected) return;
-    homes.forEach((ph, el) => ph.replaceWith(el));
-    homes.clear();
-    pager.replaceChildren(); pager.remove(); dots.remove();
-    document.documentElement.classList.remove("paged");
-    document.querySelectorAll(".dock button").forEach((b) => b.removeAttribute("aria-current"));
-  }
-  let scrollTimer;
-  pager.addEventListener("scroll", () => {
-    const i = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
-    if (i !== curPage && PAGES[i]) markPage(i);
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => { const pg = pager.children[curPage]; if (pg && !pg.contains(document.activeElement)) pg.focus({ preventScroll: true }); }, 400);
-  }, { passive: true });
-  addEventListener("resize", () => { if (pager.isConnected) pager.scrollLeft = curPage * pager.clientWidth; });
-  const phone = matchMedia("(max-width: 860px)");
-  const syncPager = () => (phone.matches ? enterPager() : leavePager());
-  phone.addEventListener ? phone.addEventListener("change", syncPager) : phone.addListener(syncPager);
-  syncPager();
-
   document.querySelectorAll(".dock button").forEach((b) => b.addEventListener("click", () => {
-    if (pager.isConnected) {
-      showPage(b.dataset.go);
-      if (b.dataset.go === "f-title") $("f-jumlah").focus({ preventScroll: true });
-      return;
-    }
     const el = $(b.dataset.go); if (!el) return;
     const target = el.closest(".card") || el;
     target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
