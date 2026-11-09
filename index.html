@@ -345,6 +345,34 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
   .tx { grid-template-columns: auto minmax(0, 1fr) auto; }
   .tx .acts { grid-column: 2 / -1; justify-content: flex-end; }
 }
+/* entrance: each block slides in from its own direction (set by JS in "reveal"), text follows from the opposite side */
+:root { --ease-out: cubic-bezier(.16, 1, .3, 1); }
+.rv { opacity: 0; transform: translate3d(var(--rx, 0px), var(--ry, 0px), 0) scale(var(--rs, 1));
+  transition: opacity .55s ease var(--rd, 0ms), transform .8s var(--ease-out) var(--rd, 0ms); }
+.rv[data-from="left"] { --rx: -44px; --hx: 22px; --hy: 0px; }
+.rv[data-from="right"] { --rx: 44px; --hx: -22px; --hy: 0px; }
+.rv[data-from="bottom"] { --ry: 30px; --hy: 12px; }
+.rv[data-from="top"] { --ry: -26px; --hy: -10px; }
+.rv[data-from="zoom"] { --rs: .86; }
+.rv.in { opacity: 1; transform: none; }
+/* text inside a block: comes in from the opposite side, a beat later */
+.rv .card-head h2, .rv .stat .val {
+  display: inline-block; opacity: 0; transform: translate3d(var(--hx, 0px), var(--hy, 12px), 0);
+  transition: opacity .5s ease calc(var(--rd, 0ms) + 140ms), transform .75s var(--ease-out) calc(var(--rd, 0ms) + 140ms); }
+.rv .stat .val { display: block; }
+.rv .card-head > :not(h2), .rv .stat .sub, .rv .stat .label { opacity: 0; transition: opacity .5s ease calc(var(--rd, 0ms) + 260ms); }
+.rv.in .card-head h2, .rv.in .stat .val, .rv.in .card-head > :not(h2), .rv.in .stat .sub, .rv.in .stat .label { opacity: 1; transform: none; }
+/* rows and items: a short stagger, each list from its own side */
+.rv table.rekap tbody tr, .rv .cat, .rv .goal, .rv .tx, .rv .day-head {
+  opacity: 0; transition: opacity .45s ease calc(var(--rd, 0ms) + var(--i, 0) * 60ms + 220ms), transform .7s var(--ease-out) calc(var(--rd, 0ms) + var(--i, 0) * 60ms + 220ms); }
+.rv table.rekap tbody tr { transform: translate3d(28px, 0, 0); }
+.rv .cat { transform: translate3d(-24px, 0, 0); }
+.rv .goal { transform: translate3d(0, 22px, 0); }
+.rv .tx, .rv .day-head { transform: translate3d(0, 16px, 0); }
+.rv.in table.rekap tbody tr, .rv.in .cat, .rv.in .goal, .rv.in .tx, .rv.in .day-head { opacity: 1; transform: none; }
+/* progress bars fill in once their block is on screen */
+.rv .bar i { clip-path: inset(-12px 100% -12px -12px); transition: width .5s ease, clip-path 1.1s var(--ease-out) calc(var(--rd, 0ms) + 320ms); }
+.rv.in .bar i { clip-path: inset(-12px -12px -12px -12px); }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
 </style>
 
@@ -1387,6 +1415,42 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     if (b.dataset.go === "f-title") $("f-jumlah").focus({ preventScroll: true });
   }));
+
+  /* ---------- reveal: blocks enter from different directions ---------- */
+  (function reveal() {
+    if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const narrow = matchMedia("(max-width: 860px)").matches;
+    const items = [];
+    const add = (el, from, delay) => { if (el) { el.classList.add("rv"); el.dataset.from = from; el.style.setProperty("--rd", (delay || 0) + "ms"); items.push(el); } };
+    // header: pill drops in, logo pops, greeting and headline cross from opposite sides
+    add(document.querySelector(".topbar"), "top", 0);
+    add(document.querySelector(".hero-logo"), "zoom", 90);
+    add($("greet"), "left", 180);
+    add($("headline"), "right", 250);
+    add(document.querySelector(".controls"), "bottom", 330);
+    add($("status"), "bottom", 400);
+    // summary cards: each from its own side
+    const statFrom = narrow ? ["left", "right", "left", "right", "left"] : ["left", "top", "right", "bottom", "right"];
+    document.querySelectorAll(".summary .stat").forEach((el, i) => add(el, statFrom[i] || "bottom", 120 + i * 80));
+    // main cards: left column from the left, right column from the right; one column alternates
+    let n = 0;
+    document.querySelectorAll(".cols > .col").forEach((col, c) => {
+      [...col.children].forEach((card, k) => add(card, narrow ? (n++ % 2 ? "right" : "left") : (c ? "right" : "left"), narrow ? 0 : k * 90 + c * 60));
+    });
+    // stagger index for rows already on the page (rows drawn later appear at once)
+    const index = (root) => root.querySelectorAll("table.rekap tbody tr, .cat, .goal, .tx, .day-head").forEach((r, i) => r.style.setProperty("--i", Math.min(i, 8)));
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        index(e.target);
+        e.target.classList.add("in");
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+    items.forEach((el) => io.observe(el));
+    // safety net: anything already on screen is shown even if the observer never fires
+    setTimeout(() => items.forEach((el) => { if (el.getBoundingClientRect().top < innerHeight) { index(el); el.classList.add("in"); } }), 2500);
+  })();
 
   /* ---------- boot ---------- */
   const jam = new Date().getHours();
