@@ -234,6 +234,11 @@ form { display: grid; gap: 12px; }
 .cat-top { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
 .cat-top span:first-child { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .cat-top .num { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+.cat-total { padding: 14px 16px; border-radius: 18px; background: var(--glass-hi); border: 1px solid var(--stroke-hi); }
+.cat-total .cat-top span:first-child { font-size: 15px; }
+.cat-total .cat-top .num { font-size: 14px; font-weight: 700; color: var(--ink); }
+.bud-total { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--glass-hi); border: 1px solid var(--stroke-hi); font-size: 14px; font-weight: 600; margin: 4px 0 0; }
+.bud-total b { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .bar { height: 6px; border-radius: 999px; background: var(--track); position: relative; }
 .bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lav-deep), var(--pink) 75%, var(--peach)); position: relative; transition: width .5s ease; }
 .bar i::after { content: ""; position: absolute; right: -5px; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: #fff; transform: translateY(-50%); box-shadow: 0 0 10px 3px rgba(215, 165, 255, 0.85); }
@@ -909,12 +914,16 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     if (state.budgetEdit) {
       box.innerHTML = '<form class="budget-edit" id="budget-form"><p class="muted">Ubah nama kategori, isi batas per bulan (kosongkan jika tidak perlu), hapus dengan ×, atau tambah kategori baru.</p>' +
         '<div id="bud-rows">' + katKeluar().map((k) => budRow(k, state.limits[k])).join("") + '</div>' +
+        '<p class="bud-total"><span>Total anggaran</span><b id="bud-total">' + fmt(katKeluar().reduce((a, k) => a + (Number(state.limits[k]) || 0), 0)) + '</b></p>' +
         '<div class="bud-actions"><button type="button" class="btn" id="bud-add">+ Tambah kategori</button><button type="submit" class="btn primary">Simpan anggaran</button></div></form>';
       box.querySelectorAll("input[data-money]").forEach(bindThousands);
       $("budget-form").addEventListener("submit", saveBudget);
+      const sumBudget = () => { $("bud-total").textContent = fmt([...box.querySelectorAll("#bud-rows input[data-money]")].reduce((a, i) => a + parseAmount(i.value), 0)); };
+      $("bud-rows").addEventListener("input", sumBudget);
       $("bud-rows").addEventListener("click", (e) => {
         const b = e.target.closest(".bud-del"); if (!b) return;
         b.closest(".bud-row").remove();
+        sumBudget();
       });
       $("bud-add").addEventListener("click", () => {
         $("bud-rows").insertAdjacentHTML("beforeend", budRow("", 0));
@@ -933,7 +942,19 @@ svg.chart .b.hl { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.
     }
     cats.sort((a, b) => (spent[b] || 0) - (spent[a] || 0));
     const maxSpent = Math.max(...Object.values(spent), 1);
-    box.innerHTML = cats.map((k) => {
+    const totLim = cats.reduce((a, k) => a + (Number(state.limits[k]) || 0), 0);
+    const totSpent = cats.reduce((a, k) => a + (spent[k] || 0), 0);
+    const unbudgeted = cats.reduce((a, k) => a + (Number(state.limits[k]) > 0 ? 0 : spent[k] || 0), 0);
+    let total = "";
+    if (totLim > 0) {
+      const tp = (totSpent / totLim) * 100;
+      const tst = totSpent > totLim ? "over" : tp >= 80 ? "warn" : "ok";
+      const tnote = (totSpent > totLim ? "Lewat " + fmt(totSpent - totLim) + " dari total anggaran" : "Sisa " + fmt(totLim - totSpent) + " · " + Math.round(tp) + "% terpakai") +
+        (unbudgeted ? " · termasuk " + fmt(unbudgeted) + " tanpa anggaran" : "");
+      total = '<div class="cat cat-total" data-s="' + tst + '"><div class="cat-top"><span>Total anggaran</span><span class="num">' + fmt(totSpent) + " / " + fmt(totLim) + '</span></div>' +
+        '<div class="bar" role="progressbar" aria-label="Total anggaran terpakai" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(Math.min(100, tp)) + '"><i style="width:' + Math.min(100, tp).toFixed(1) + '%"></i></div><span class="cat-note">' + tnote + '</span></div>';
+    }
+    box.innerHTML = total + cats.map((k) => {
       const s = spent[k] || 0, lim = Number(state.limits[k]) || 0;
       let st = "ok", note, pct;
       if (lim > 0) {
